@@ -13,7 +13,7 @@ import core.utils.ExceptionUtil;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.ISnowflake;
-import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.entities.emoji.Emoji;
 import net.dv8tion.jda.api.events.message.react.GenericMessageReactionEvent;
 import net.dv8tion.jda.api.events.message.react.MessageReactionRemoveEvent;
@@ -30,7 +30,7 @@ public interface OnReactionListener extends Drawable {
 
     boolean onReaction(GenericMessageReactionEvent event) throws Throwable;
 
-    default CompletableFuture<Long> registerReactionListener(Member member, Emoji... emojis) {
+    default CompletableFuture<Long> registerReactionListener(User member, Emoji... emojis) {
         Command command = (Command) this;
         return registerReactionListener(member, event -> {
                     boolean ok = event.getUserIdLong() == member.getIdLong() &&
@@ -50,7 +50,7 @@ public interface OnReactionListener extends Drawable {
         });
     }
 
-    default CompletableFuture<Long> registerReactionListener(Member member, Function<GenericMessageReactionEvent, CommandListenerMeta.CheckResponse> validityChecker) {
+    default CompletableFuture<Long> registerReactionListener(User member, Function<GenericMessageReactionEvent, CommandListenerMeta.CheckResponse> validityChecker) {
         Command command = (Command) this;
 
         Runnable onTimeOut = () -> {
@@ -141,7 +141,7 @@ public interface OnReactionListener extends Drawable {
             }
             if (onReaction(event)) {
                 CommandContainer.refreshListeners(command);
-                EmbedBuilder eb = draw(event.getMember());
+                EmbedBuilder eb = draw(event.getUser());
                 if (eb != null) {
                     ((Command) this).drawMessage(eb)
                             .exceptionally(ExceptionLogger.get());

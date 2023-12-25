@@ -12,7 +12,7 @@ public class Main {
             Console.start();
 //            DBMain.getInstance().connect();
 
-            DiscordConnector.connect(0, Program.productionMode() ? 1 : 0, Program.productionMode() ? 2 : 1);
+            DiscordConnector.connect(0, 0, 1);
             if (Program.productionMode()) {
                 Runtime.getRuntime().addShutdownHook(new Thread(Program::onStop, "Shutdown Bot-Stop"));
             }

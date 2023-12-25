@@ -13,6 +13,7 @@ import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Role;
+import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.entities.channel.ChannelType;
 import net.dv8tion.jda.api.entities.channel.middleman.GuildChannel;
 import net.dv8tion.jda.api.entities.channel.middleman.GuildMessageChannel;
@@ -53,18 +54,18 @@ public abstract class NavigationAbstract extends Command implements OnTriggerLis
         super(locale, prefix);
     }
 
-    protected void registerNavigationListener(Member member) {
-        registerButtonListener(member);
-        registerSelectMenuListener(member, false);
-        registerMessageInputListener(member, false);
-        processDraw(member, true).exceptionally(ExceptionLogger.get());
+    protected void registerNavigationListener(User user) {
+        registerButtonListener(user);
+        registerSelectMenuListener(user, false);
+        registerMessageInputListener(user, false);
+        processDraw(user, true).exceptionally(ExceptionLogger.get());
     }
 
     @Override
     public MessageInputResponse onMessageInput(MessageReceivedEvent event, String input) throws Throwable {
         MessageInputResponse messageInputResponse = controllerMessage(event, input, state);
         if (messageInputResponse != null) {
-            processDraw(event.getMember(), true).exceptionally(ExceptionLogger.get());
+            processDraw(event.getAuthor(), true).exceptionally(ExceptionLogger.get());
         }
 
         return messageInputResponse;
@@ -98,7 +99,7 @@ public abstract class NavigationAbstract extends Command implements OnTriggerLis
             }
 
             if (changed) {
-                processDraw(event.getMember(), loadComponents)
+                processDraw(event.getUser(), loadComponents)
                         .exceptionally(ExceptionLogger.get());
             }
         } catch (Throwable throwable) {
@@ -115,7 +116,7 @@ public abstract class NavigationAbstract extends Command implements OnTriggerLis
         }
         boolean changed = controllerSelectionMenu(event, i, state);
         if (changed) {
-            processDraw(event.getMember(), true)
+            processDraw(event.getUser(), true)
                     .exceptionally(ExceptionLogger.get());
         }
 
@@ -201,11 +202,11 @@ public abstract class NavigationAbstract extends Command implements OnTriggerLis
     }
 
     @Override
-    public EmbedBuilder draw(Member member) {
+    public EmbedBuilder draw(User member) {
         return null;
     }
 
-    public EmbedBuilder draw(Member member, int state) throws Throwable {
+    public EmbedBuilder draw(User member, int state) throws Throwable {
         for (Method method : getClass().getDeclaredMethods()) {
             Draw c = method.getAnnotation(Draw.class);
             if (c != null && c.state() == state) {
@@ -231,7 +232,7 @@ public abstract class NavigationAbstract extends Command implements OnTriggerLis
         return null;
     }
 
-    public CompletableFuture<Long> processDraw(Member member, boolean loadComponents) {
+    public CompletableFuture<Long> processDraw(User member, boolean loadComponents) {
         Locale locale = getLocale();
         EmbedBuilder eb;
         try {

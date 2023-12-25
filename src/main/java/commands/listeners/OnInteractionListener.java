@@ -16,6 +16,7 @@ import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.ISnowflake;
 import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.events.interaction.component.GenericComponentInteractionCreateEvent;
 
 import java.util.Collection;
@@ -48,7 +49,7 @@ public interface OnInteractionListener extends Drawable {
         command.resetDrawMessage();
     }
 
-    default CompletableFuture<Long> registerInteractionListener(Member member, ExceptionRunnable overriddenMethod, Class<?> clazz, boolean draw) {
+    default CompletableFuture<Long> registerInteractionListener(User member, ExceptionRunnable overriddenMethod, Class<?> clazz, boolean draw) {
         return registerInteractionListener(member, event -> {
             if (event.getMessageIdLong() == ((Command) this).getDrawMessageId().orElse(0L)) {
                 return event.getUser().getIdLong() == member.getIdLong() ? CommandListenerMeta.CheckResponse.ACCEPT : CommandListenerMeta.CheckResponse.DENY;
@@ -57,7 +58,7 @@ public interface OnInteractionListener extends Drawable {
         }, overriddenMethod, clazz, draw);
     }
 
-    default <T extends GenericComponentInteractionCreateEvent> CompletableFuture<Long> registerInteractionListener(Member member, Function<T, CommandListenerMeta.CheckResponse> validityChecker,
+    default <T extends GenericComponentInteractionCreateEvent> CompletableFuture<Long> registerInteractionListener(User member, Function<T, CommandListenerMeta.CheckResponse> validityChecker,
                                                                                                                    ExceptionRunnable overriddenMethod, Class<?> clazz,
                                                                                                                    boolean draw
     ) {
@@ -117,7 +118,7 @@ public interface OnInteractionListener extends Drawable {
             }
             if (task.apply(event)) {
                 CommandContainer.refreshListeners(command);
-                EmbedBuilder eb = draw(event.getMember());
+                EmbedBuilder eb = draw(event.getUser());
                 if (eb != null) {
                     ((Command) this).drawMessage(eb)
                             .exceptionally(ExceptionLogger.get());

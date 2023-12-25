@@ -19,7 +19,6 @@
 
     <root level="INFO">
         <appender-ref ref="STDOUT"/>
-        <appender-ref ref="file"/>
         <appender-ref ref="discord"/>
     </root>
 

@@ -20,7 +20,7 @@ import java.util.Iterator;
 
 public class DiscordConsole extends AppenderBase<ILoggingEvent> implements AppenderAttachable<ILoggingEvent> {
 
-    private static final WebhookClient webhookClient = new WebhookClientBuilder(1187396711027585044L, "PEBUC3_wCeb3KrVMJfny_hsdByfXIskvOqzJcLDpFp_S8FkSijuXB9K-MpuXeGQx3bMx")
+    private static final WebhookClient webhookClient = new WebhookClientBuilder(1187416172568776784L, "iNoxhmRxtIp4oJNtWLcP_hIVHxOViA7BS6AimjcL9n_oVh3GHCo5w9lgA2MKHnDvEjUY")
             .build();
     private final AppenderAttachableImpl<ILoggingEvent> appenderAttachable = new AppenderAttachableImpl<>();
 
@@ -64,7 +64,7 @@ public class DiscordConsole extends AppenderBase<ILoggingEvent> implements Appen
             StringUtil.shortenString(description.toString(), 2045);
             description.append("```");
 
-            messageBuilder.setContent("@everyone");
+            messageBuilder.setContent("<@547064638597234688>");
         }
 
         if (eventObject.getLevel() == Level.WARN) {

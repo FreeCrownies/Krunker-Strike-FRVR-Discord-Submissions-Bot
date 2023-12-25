@@ -19,7 +19,7 @@ public class GuildMessageReceivedDiscordConsole extends GuildMessageReceivedAbst
 
     @Override
     public boolean onGuildMessageReceived(MessageReceivedEvent event) throws Throwable {
-        if (event.getChannel().getIdLong() != 1187396625501520072L) {
+        if (event.getChannel().getIdLong() != 1187416124137164860L) {
             return true;
         }
         if (Arrays.stream(ALLOWED_USERS).noneMatch(id -> id == event.getAuthor().getIdLong())) {

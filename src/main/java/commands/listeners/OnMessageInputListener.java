@@ -10,7 +10,7 @@ import core.utils.BotPermissionUtil;
 import core.utils.ExceptionUtil;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.Permission;
-import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -20,11 +20,11 @@ public interface OnMessageInputListener extends Drawable {
 
     MessageInputResponse onMessageInput(MessageReceivedEvent event, String input) throws Throwable;
 
-    default void registerMessageInputListener(Member member) {
+    default void registerMessageInputListener(User member) {
         registerMessageInputListener(member, true);
     }
 
-    default void registerMessageInputListener(Member member, boolean draw) {
+    default void registerMessageInputListener(User member, boolean draw) {
         Command command = (Command) this;
         registerMessageInputListener(member, draw, event -> {
                     boolean ok = event.getMember().getIdLong() == member.getIdLong() &&
@@ -34,7 +34,7 @@ public interface OnMessageInputListener extends Drawable {
         );
     }
 
-    default void registerMessageInputListener(Member member, boolean draw, Function<MessageReceivedEvent, CommandListenerMeta.CheckResponse> validityChecker) {
+    default void registerMessageInputListener(User member, boolean draw, Function<MessageReceivedEvent, CommandListenerMeta.CheckResponse> validityChecker) {
         Command command = (Command) this;
 
         Runnable onTimeOut = () -> {
@@ -92,7 +92,7 @@ public interface OnMessageInputListener extends Drawable {
                     }
                 }
 
-                EmbedBuilder eb = draw(event.getMember());
+                EmbedBuilder eb = draw(event.getAuthor());
                 if (eb != null) {
                     ((Command) this).drawMessage(eb)
                             .exceptionally(ExceptionLogger.get());

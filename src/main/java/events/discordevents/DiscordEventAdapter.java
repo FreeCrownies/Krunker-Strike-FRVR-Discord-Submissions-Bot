@@ -93,6 +93,7 @@ public class DiscordEventAdapter extends ListenerAdapter {
 
     @Override
     public void onReady(@NotNull ReadyEvent event) {
+        System.out.println("ready");
         GlobalThreadPool.getExecutorService()
                 .submit(() -> DiscordConnector.onJDAJoin(event.getJDA()));
     }

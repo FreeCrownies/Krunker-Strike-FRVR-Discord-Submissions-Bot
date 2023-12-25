@@ -13,7 +13,7 @@ import core.utils.ExceptionUtil;
 import core.utils.StringUtil;
 import javafx.util.Pair;
 import net.dv8tion.jda.api.EmbedBuilder;
-import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent;
 import net.dv8tion.jda.api.interactions.components.ActionRow;
@@ -50,11 +50,11 @@ public abstract class ListAbstract extends Command implements OnButtonListener, 
         return -1;
     }
 
-    protected abstract int configure(Member member, int orderBy) throws Throwable;
+    protected abstract int configure(User member, int orderBy) throws Throwable;
 
     protected abstract Pair<String, String> getEntry(int i, int orderBy) throws Throwable;
 
-    protected void registerList(Member member, String args, String... orderOptions) throws Throwable {
+    protected void registerList(User member, String args, String... orderOptions) throws Throwable {
         boolean argsFound = false;
         this.orderOptions = orderOptions;
         for (String part : args.split(" ")) {
@@ -129,7 +129,7 @@ public abstract class ListAbstract extends Command implements OnButtonListener, 
                                 page = Math.min(getPageSize() - 1, Math.max(0, Integer.parseInt(pageString) - 1));
                             }
                             try {
-                                drawMessage(draw(modalEvent.getMember()))
+                                drawMessage(draw(modalEvent.getUser()))
                                         .exceptionally(ExceptionLogger.get());
                             } catch (Throwable e) {
                                 ExceptionUtil.handleCommandException(e, this);
@@ -149,12 +149,12 @@ public abstract class ListAbstract extends Command implements OnButtonListener, 
     @Override
     public boolean onSelectMenu(@NotNull StringSelectInteractionEvent event) throws Throwable {
         orderBy = Integer.parseInt(event.getValues().get(0));
-        size = configure(event.getMember(), orderBy);
+        size = configure(event.getUser(), orderBy);
         return true;
     }
 
     @Override
-    public EmbedBuilder draw(@NotNull Member member) throws Throwable {
+    public EmbedBuilder draw(@NotNull User member) throws Throwable {
         EmbedBuilder eb = EmbedFactory.getEmbedDefault(this);
         EmbedUtil.setFooter(eb, this, TextManager.getString(getLocale(), TextManager.GENERAL, "list_footer", String.valueOf(page + 1), String.valueOf(getPageSize())));
 
