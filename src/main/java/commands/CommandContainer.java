@@ -5,6 +5,7 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.RemovalCause;
 import commands.listeners.OnStaticReactionAddListener;
 import commands.listeners.OnStaticReactionRemoveListener;
+import commands.runnables.dm.SubmitCommand;
 import constants.Settings;
 import core.MainLogger;
 import core.utils.ExceptionUtil;
@@ -27,7 +28,7 @@ public class CommandContainer {
         final ArrayList<Class<? extends Command>> commandList = new ArrayList<>();
 
 
-        // ADD COMMANDS HERE
+        commandList.add(SubmitCommand.class);
 
 
         for (Class<? extends Command> clazz : commandList) {

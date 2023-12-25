@@ -3,6 +3,7 @@ package commands.runnables;
 import commands.Command;
 import commands.CommandContainer;
 import commands.listeners.*;
+import commands.runnables.dm.SubmitCommand;
 import constants.LogStatus;
 import core.ExceptionLogger;
 import core.MainLogger;
@@ -242,7 +243,7 @@ public abstract class NavigationAbstract extends Command implements OnTriggerLis
         }
 
         ArrayList<Button> controlButtonList = new ArrayList<>();
-        if (CommandContainer.getListener(OnButtonListener.class, this).isPresent() && !hideBackButton) {
+        if (CommandContainer.getListener(OnButtonListener.class, this).isPresent() && !hideBackButton && !(state == DEFAULT_STATE && (this instanceof SubmitCommand))) {
             controlButtonList.add(Button.of(ButtonStyle.SECONDARY, BUTTON_ID_BACK, TextManager.getString(getLocale(), TextManager.GENERAL, "list_back")));
         }
         if (loadComponents) {

@@ -6,6 +6,7 @@ import commands.listeners.OnButtonListener;
 import commands.listeners.OnMessageInputListener;
 import commands.listeners.OnReactionListener;
 import commands.listeners.OnStringSelectMenuListener;
+import commands.runnables.dm.SubmitCommand;
 import commands.slashadapters.runningchecker.RunningCheckerManager;
 import constants.Emojis;
 import constants.Settings;
@@ -19,6 +20,7 @@ import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Message;
+import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.entities.emoji.Emoji;
 import net.dv8tion.jda.api.interactions.components.buttons.Button;
 import net.dv8tion.jda.api.requests.RestAction;
@@ -58,6 +60,7 @@ public class CommandManager {
 
     private static void process(CommandEvent event, Command command, String args, Instant startTime, boolean freshCommand) {
         if (command instanceof DMCommand ||
+                command instanceof SubmitCommand ||
                 (botCanPost(event, command) &&
                         botCanUseEmbeds(event, command) &&
                         canRunOnGuild(event, command) &&
@@ -65,10 +68,9 @@ public class CommandManager {
                         checkPermissions(event, command)
                 )
         ) {
-
             try {
-                cleanPreviousListeners(command, event.getMember());
-                sendOverwrittenSignals(command, event.getMember());
+                cleanPreviousListeners(command, event.getUser());
+                sendOverwrittenSignals(command, event.getUser());
 
                 boolean success = command.processTrigger(event, args, freshCommand);
                 if (success && Program.publicVersion()) {
@@ -84,7 +86,7 @@ public class CommandManager {
 
     private static boolean checkRunningCommands(CommandEvent event, Command command) {
         // To-do add custom checker for dm commands
-        if (command instanceof DMCommand) return true;
+        if (command instanceof SubmitCommand) return true;
         if (RunningCheckerManager.canUserRunCommand(
                 command,
                 event.getGuild().getIdLong(),
@@ -136,7 +138,7 @@ public class CommandManager {
             return true;
         }
 
-        CoolDownUserData cooldownUserData = CoolDownManager.getCoolDownData(event.getMember().getIdLong());
+        CoolDownUserData cooldownUserData = CoolDownManager.getCoolDownData(event.getUser().getIdLong());
 
         Optional<Integer> waitingSec = cooldownUserData.getWaitingSec(Settings.COOLDOWN_TIME_SEC);
         if (waitingSec.isEmpty()) {
@@ -287,7 +289,8 @@ public class CommandManager {
             return true;
         }
 
-        if (event.isGuildMessageReceivedEvent() &&
+        if (command.getGuild().isPresent() &&
+                event.isGuildMessageReceivedEvent() &&
                 BotPermissionUtil.canReadHistory(event.getGuildMessageChannel(), Permission.MESSAGE_ADD_REACTION)
         ) {
             Message message = event.getMessageReceivedEvent().getMessage();
@@ -298,15 +301,6 @@ public class CommandManager {
                     .queue();
         }
 
-        if (!sendHelpDm(event.getMember(), command)) {
-            if (BotPermissionUtil.can(event.getMember(), Permission.ADMINISTRATOR)) {
-                JDAUtil.sendPrivateMessage(
-                        event.getMember(),
-                        TextManager.getString(command.getLocale(), TextManager.GENERAL, "missing_permissions_writing", event.getChannel().getAsMention())
-                ).queue();
-            }
-        }
-
         return false;
     }
 
@@ -314,14 +308,14 @@ public class CommandManager {
         return false;
     }
 
-    private static void sendOverwrittenSignals(Command command, Member member) {
+    private static void sendOverwrittenSignals(Command command, User member) {
         sendOverwrittenSignals(command, member, OnReactionListener.class);
         sendOverwrittenSignals(command, member, OnMessageInputListener.class);
         sendOverwrittenSignals(command, member, OnButtonListener.class);
         sendOverwrittenSignals(command, member, OnStringSelectMenuListener.class);
     }
 
-    private static void sendOverwrittenSignals(Command command, Member member, Class<?> clazz) {
+    private static void sendOverwrittenSignals(Command command, User member, Class<?> clazz) {
         if (clazz.isInstance(command)) {
             CommandContainer.getListeners(clazz).stream()
                     .filter(meta -> meta.getAuthorId() == member.getIdLong())
@@ -329,7 +323,7 @@ public class CommandManager {
         }
     }
 
-    private static void cleanPreviousListeners(Command command, Member member) {
+    private static void cleanPreviousListeners(Command command, User member) {
         for (Class<?> clazz : CommandContainer.getListenerClasses()) {
             if (clazz.isInstance(command)) {
                 ArrayList<CommandListenerMeta<?>> metaList = CommandContainer.getListeners(clazz).stream()

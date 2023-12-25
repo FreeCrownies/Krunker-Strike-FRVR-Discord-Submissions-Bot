@@ -18,6 +18,8 @@ import mysql.modules.staticreactionmessages.StaticReactionMessageData;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.*;
+import net.dv8tion.jda.api.entities.channel.ChannelType;
+import net.dv8tion.jda.api.entities.channel.concrete.PrivateChannel;
 import net.dv8tion.jda.api.entities.channel.middleman.GuildMessageChannel;
 import net.dv8tion.jda.api.entities.channel.unions.GuildMessageChannelUnion;
 import net.dv8tion.jda.api.exceptions.PermissionException;
@@ -84,16 +86,8 @@ public abstract class Command implements OnTriggerListener {
         return CategoryCalculator.getCategoryByCommand(clazz);
     }
 
-    public Category getCategory() {
-        return category;
-    }
-
     public static CommandProperties getCommandProperties(Class<? extends Command> clazz) {
         return clazz.getAnnotation(CommandProperties.class);
-    }
-
-    public CommandProperties getCommandProperties() {
-        return commandProperties;
     }
 
     public static CommandLanguage getCommandLanguage(Class<? extends Command> clazz, Locale locale) {
@@ -106,6 +100,14 @@ public abstract class Command implements OnTriggerListener {
         String usage = TextManager.getString(locale, category, trigger + "_usage");
         String examples = TextManager.getString(locale, category, trigger + "_examples");
         return new CommandLanguage(title, descShort, descLong, usage, examples);
+    }
+
+    public Category getCategory() {
+        return category;
+    }
+
+    public CommandProperties getCommandProperties() {
+        return commandProperties;
     }
 
     public CommandLanguage getCommandLanguage() {
@@ -134,6 +136,7 @@ public abstract class Command implements OnTriggerListener {
     }
 
     public void addLoadingReactionInstantly(Message message, AtomicBoolean isProcessing) {
+        if (message.getChannelType() == ChannelType.PRIVATE) return;
         GuildMessageChannelUnion channel = message.getGuildChannel();
         if (isProcessing.get() &&
                 !loadingReactionSet && BotPermissionUtil.canReadHistory(channel, Permission.MESSAGE_ADD_REACTION) &&
@@ -313,6 +316,10 @@ public abstract class Command implements OnTriggerListener {
             } else {
                 return CompletableFuture.failedFuture(new PermissionException("Missing permissions"));
             }
+        } else if (getGuild().isEmpty()) {
+            EmbedUtil.addLog(eb, logStatus, log);
+            commandEvent.getChannel();
+            return drawMessage(commandEvent.getChannel().asPrivateChannel(), null, eb, newMessage);
         } else {
             return CompletableFuture.failedFuture(new NoSuchElementException("Missing text channel"));
         }
@@ -376,7 +383,7 @@ public abstract class Command implements OnTriggerListener {
                         messageAction = JDAUtil.replyMessage(message, content)
                                 .setEmbeds(embeds);
                     } else {
-                        messageAction = JDAUtil.replyMessageEmbeds(message, embeds);
+                        messageAction = JDAUtil.replyMessageEmbeds(false, message, embeds);
                     }
                     if (BotPermissionUtil.canWrite(channel, Permission.MESSAGE_ATTACH_FILES)) {
                         if (fileAttachmentMap.size() > 0) {
@@ -428,6 +435,139 @@ public abstract class Command implements OnTriggerListener {
                 if (interactionResponse != null &&
                         interactionResponse.isValid() &&
                         (BotPermissionUtil.canUseExternalEmojisInInteraction(channel) || !getCommandProperties().usesExtEmotes())
+                ) {
+                    action = interactionResponse.editMessageEmbeds(embeds, actionRows);
+                } else {
+                    if (content != null) {
+                        action = channel.editMessageById(drawMessage.getIdLong(), content)
+                                .setEmbeds(embeds)
+                                .setComponents(actionRows)
+                                .setAllowedMentions(allowedMentions);
+                    } else {
+                        action = channel.editMessageEmbedsById(drawMessage.getIdLong(), embeds)
+                                .setAllowedMentions(allowedMentions)
+                                .setComponents(actionRows);
+                    }
+                }
+            }
+            // only used for uneditable ephemeral message created with GenericComponentInteractionCreateEvent#reply
+            if (!newMessageTest) {
+                action.queue(message -> {
+
+                    if (!newMessage) {
+                        drawMessage = message;
+                    }
+                    // changed from  future.complete(message) to  future.complete(drawMessage)
+                    future.complete(drawMessage);
+                }, e -> {
+                    MainLogger.get().error("Draw exception for \"{}\"", getTrigger(), e);
+                    future.completeExceptionally(e);
+                });
+            } else {
+                newMessageTest = false;
+            }
+
+            return future;
+        } finally {
+            resetDrawState();
+        }
+    }
+
+    private synchronized CompletableFuture<Message> drawMessage(PrivateChannel channel, String content, EmbedBuilder eb, boolean newMessage) {
+        try {
+            CompletableFuture<Message> future = new CompletableFuture<>();
+            ArrayList<MessageEmbed> embeds = new ArrayList<>();
+            try {
+                if (eb != null) {
+                    embeds.add(eb.build());
+                }
+                embeds.addAll(additionalEmbeds);
+            } catch (Throwable e) {
+                StringBuilder sb = new StringBuilder("Embed exception with fields:");
+                if (eb != null) {
+                    eb.getFields().forEach(field -> sb
+                            .append("\nKey: \"")
+                            .append(field.getName())
+                            .append("\"; Value: \"")
+                            .append(field.getValue())
+                            .append("\"")
+                    );
+                }
+                MainLogger.get().error(sb.toString(), e);
+                throw e;
+            }
+
+            if (actionRows == null) {
+                actionRows = Collections.emptyList();
+            }
+
+            HashSet<String> usedIds = new HashSet<>();
+            for (ActionRow actionRow : actionRows) {
+                for (ActionComponent component : actionRow.getActionComponents()) {
+                    if (component.getId() != null) {
+                        if (usedIds.contains(component.getId())) {
+                            future.completeExceptionally(new Exception("Duplicate custom id \"" + component.getId() + "\""));
+                            return future;
+                        }
+                        usedIds.add(component.getId());
+                    }
+                }
+            }
+
+            RestAction<Message> action;
+            if (drawMessage == null || newMessage) {
+                if (commandEvent.isGuildMessageReceivedEvent()) {
+                    MessageCreateAction messageAction;
+                    Message message = commandEvent.getMessageReceivedEvent().getMessage();
+                    if (content != null) {
+                        messageAction = JDAUtil.replyMessage(message, content)
+                                .setEmbeds(embeds);
+                    } else {
+                        messageAction = JDAUtil.replyMessageEmbeds(true, message, embeds);
+                    }
+                    if (fileAttachmentMap.size() > 0) {
+                        for (String fileName : fileAttachmentMap.keySet()) {
+                            messageAction = messageAction.addFiles(FileUpload.fromData(fileAttachmentMap.get(fileName), fileName));
+                        }
+                    }
+                    messageAction = messageAction.setAllowedMentions(allowedMentions);
+                    action = messageAction.setComponents(actionRows);
+                } else if (commandEvent.isSlashCommandInteractionEvent()) {
+                    WebhookMessageCreateAction<Message> messageAction;
+                    InteractionHook interactionHook = commandEvent.getSlashCommandInteractionEvent().getHook();
+                    if (content != null) {
+                        messageAction = interactionHook.sendMessage(content)
+                                .addEmbeds(embeds);
+                    } else {
+                        messageAction = interactionHook.sendMessageEmbeds(embeds);
+                    }
+                    if (fileAttachmentMap.size() > 0) {
+                        for (String fileName : fileAttachmentMap.keySet()) {
+                            messageAction = messageAction.addFiles(FileUpload.fromData(fileAttachmentMap.get(fileName), fileName));
+                        }
+                    }
+                    messageAction = messageAction.setAllowedMentions(allowedMentions);
+                    action = messageAction.addComponents(actionRows);
+                } else {
+                    WebhookMessageCreateAction<Message> messageAction;
+                    InteractionHook interactionHook = commandEvent.getButtonInteractionEvent().getHook();
+                    if (content != null) {
+                        messageAction = interactionHook.sendMessage(content)
+                                .addEmbeds(embeds);
+                    } else {
+                        messageAction = interactionHook.sendMessageEmbeds(embeds);
+                    }
+                    if (fileAttachmentMap.size() > 0) {
+                        for (String fileName : fileAttachmentMap.keySet()) {
+                            messageAction = messageAction.addFiles(FileUpload.fromData(fileAttachmentMap.get(fileName), fileName));
+                        }
+                    }
+                    messageAction = messageAction.setAllowedMentions(allowedMentions);
+                    action = messageAction.addComponents(actionRows);
+                }
+            } else {
+                if (interactionResponse != null &&
+                        interactionResponse.isValid()
                 ) {
                     action = interactionResponse.editMessageEmbeds(embeds, actionRows);
                 } else {

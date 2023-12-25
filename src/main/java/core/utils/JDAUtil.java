@@ -204,28 +204,32 @@ public class JDAUtil {
 
     public static MessageCreateAction replyMessage(Message originalMessage, String content) {
         MessageCreateAction messageAction = originalMessage.getChannel().sendMessage(content);
-        messageAction = messageActionSetMessageReference(messageAction, originalMessage);
+        messageAction = messageActionSetMessageReference(false, messageAction, originalMessage);
         return messageAction;
     }
 
-    public static MessageCreateAction replyMessageEmbeds(Message originalMessage, List<MessageEmbed> embeds) {
+    public static MessageCreateAction replyMessageEmbeds(boolean privateMessage, Message originalMessage, List<MessageEmbed> embeds) {
         MessageCreateAction messageAction = originalMessage.getChannel().sendMessageEmbeds(embeds);
-        messageAction = messageActionSetMessageReference(messageAction, originalMessage);
+        messageAction = messageActionSetMessageReference(privateMessage, messageAction, originalMessage);
         return messageAction;
     }
 
     public static MessageCreateAction replyMessageEmbeds(Message originalMessage, MessageEmbed embed, MessageEmbed... other) {
         MessageCreateAction messageAction = originalMessage.getChannel().sendMessageEmbeds(embed, other);
-        messageAction = messageActionSetMessageReference(messageAction, originalMessage);
+        messageAction = messageActionSetMessageReference(false, messageAction, originalMessage);
         return messageAction;
     }
 
-    public static MessageCreateAction messageActionSetMessageReference(MessageCreateAction messageAction, Message originalMessage) {
+    public static MessageCreateAction messageActionSetMessageReference(boolean privateMessage, MessageCreateAction messageAction, Message originalMessage) {
+        if (privateMessage) {
+            messageAction = messageAction.setMessageReference(originalMessage.getIdLong());
+            return messageAction;
+        }
         return messageActionSetMessageReference(messageAction, originalMessage.getGuildChannel(), originalMessage.getIdLong());
     }
 
     public static MessageCreateAction messageActionSetMessageReference(MessageCreateAction messageAction, GuildMessageChannelUnion textChannel, long messageId) {
-        if (BotPermissionUtil.can((GuildChannelUnion) textChannel, Permission.MESSAGE_HISTORY)) {
+        if (BotPermissionUtil.can(textChannel, Permission.MESSAGE_HISTORY)) {
             messageAction = messageAction.setMessageReference(messageId);
         }
         return messageAction;
@@ -234,10 +238,10 @@ public class JDAUtil {
     public static void deleteCommandMessage(Command command) {
         command.getDrawMessageId().ifPresent(messageId -> {
             command.getGuildMessageChannel().ifPresent(channel -> {
-                if (BotPermissionUtil.canReadHistory((GuildMessageChannelUnion) channel, Permission.MESSAGE_MANAGE) && command.getCommandEvent().isGuildMessageReceivedEvent()) {
+                if (BotPermissionUtil.canReadHistory(channel, Permission.MESSAGE_MANAGE) && command.getCommandEvent().isGuildMessageReceivedEvent()) {
                     Collection<String> messageIds = List.of(String.valueOf(messageId), command.getCommandEvent().getMessageReceivedEvent().getMessageId());
                     channel.deleteMessagesByIds(messageIds).queue();
-                } else if (BotPermissionUtil.canReadHistory((GuildMessageChannelUnion) channel)) {
+                } else if (BotPermissionUtil.canReadHistory(channel)) {
                     channel.deleteMessageById(messageId).queue();
                 }
             });

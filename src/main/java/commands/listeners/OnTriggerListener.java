@@ -25,7 +25,7 @@ public interface OnTriggerListener {
         }
 
         AtomicBoolean isProcessing = new AtomicBoolean(true);
-        if (!(command instanceof DMCommand)) {
+        if (!(command instanceof DMCommand) && command.getGuild().isPresent()) {
             command.setAtomicAssets(event.getGuildMessageChannel(), event.getMember());
         }
         command.setCommandEvent(event);

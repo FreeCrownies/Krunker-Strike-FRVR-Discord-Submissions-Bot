@@ -28,12 +28,12 @@ public class CommandEvent extends GenericChannelEvent {
     private final boolean dmCommand;
 
     public CommandEvent(@NotNull SlashCommandInteractionEvent event) {
-        super(event.getJDA(), event.getResponseNumber(), event.getGuildChannel());
+        super(event.getJDA(), event.getResponseNumber(), event.getChannel());
         this.slashCommandInteractionEvent = event;
         this.messageReceivedEvent = null;
         this.buttonInteractionEvent = null;
         this.member = event.getMember();
-        this.dmCommand = false;
+        this.dmCommand = event.getChannelType() == ChannelType.PRIVATE;
     }
 
     public CommandEvent(@NotNull MessageReceivedEvent event) {
@@ -96,7 +96,7 @@ public class CommandEvent extends GenericChannelEvent {
 
     public RestAction<Message> replyMessageEmbeds(List<MessageEmbed> embeds, Collection<ActionRow> actionRows) {
         if (isGuildMessageReceivedEvent()) {
-            return JDAUtil.replyMessageEmbeds(messageReceivedEvent.getMessage(), embeds)
+            return JDAUtil.replyMessageEmbeds(false, messageReceivedEvent.getMessage(), embeds)
                     .setComponents(actionRows);
         } else if (isSlashCommandInteractionEvent()) {
             return slashCommandInteractionEvent.getHook().sendMessageEmbeds(embeds)
@@ -126,7 +126,9 @@ public class CommandEvent extends GenericChannelEvent {
     @Nonnull
     public User getUser() {
         return dmCommand ?
-                getMessageReceivedEvent().getAuthor() :
+                getMessageReceivedEvent() != null ?
+                        getMessageReceivedEvent().getAuthor() :
+                        getSlashCommandInteractionEvent().getUser() :
                 getMember().getUser();
     }
 
