@@ -182,7 +182,7 @@ public class SubmitCommand extends NavigationAbstract {
                 return true;
             }
             case 2 -> {
-                if (DBSubmission.getInstance().get().getSubmission(event.getUser().getIdLong(), SubmissionType.ART).isPresent()) {
+                if (DBSubmission.getInstance().get().getSubmission(event.getUser().getIdLong(), SubmissionType.FAN_ART).isPresent()) {
                     setLog(LogStatus.FAILURE, getString("already_submitted"));
                     return true;
                 }
@@ -282,7 +282,7 @@ public class SubmitCommand extends NavigationAbstract {
         SubmissionType submissionType = switch (getState()) {
             case SUBMIT_GAMEPLAY -> SubmissionType.GAMEPLAY;
             case SUBMIT_SKIN -> SubmissionType.SKIN;
-            case SUBMIT_ART -> SubmissionType.ART;
+            case SUBMIT_ART -> SubmissionType.FAN_ART;
             default -> throw new IllegalStateException("Unexpected value: " + getState());
         };
         String notset = TextManager.getString(getLocale(), TextManager.GENERAL, "not_set");
