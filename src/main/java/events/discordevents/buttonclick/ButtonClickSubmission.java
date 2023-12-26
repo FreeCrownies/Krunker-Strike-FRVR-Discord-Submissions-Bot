@@ -27,8 +27,8 @@ import java.net.URL;
 @DiscordEvent
 public class ButtonClickSubmission extends ButtonClickAbstract {
 
-    private static final WebhookClient skinWebhookClient = WebhookClient.withUrl("https://discord.com/api/webhooks/1188965061407035524/n_aUCEMWfrs1EqDoQpfTTtKeENKrljPvZfTHkExWhQFbYkeMzSftl3W5i7Am3HanvzRu");
-    private static final WebhookClient gameplayWebhookClient = WebhookClient.withUrl("https://discord.com/api/webhooks/1188969636138586182/bXAJLVRfw4hpHuz3gB1J91H3aINnmwcAA-wRSAAD8CuLr9H35ObcOd6QI7E3Lo39zAfa");
+    private static final WebhookClient skinWebhookClient = WebhookClient.withUrl(System.getenv("WEBHOOK_SKIN"));
+    private static final WebhookClient gameplayWebhookClient = WebhookClient.withUrl(System.getenv("WEBHOOK_GAMEPLAY"));
 
     @Override
     public boolean onButtonClick(ButtonInteractionEvent event) throws Throwable {
