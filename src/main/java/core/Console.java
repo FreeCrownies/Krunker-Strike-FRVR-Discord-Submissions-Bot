@@ -6,6 +6,8 @@ import com.google.common.cache.CacheBuilder;
 import commands.CommandContainer;
 import commands.slashadapters.runningchecker.RunningCheckerManager;
 import core.utils.StringUtil;
+import mysql.DBMain;
+import mysql.modules.bannedusers.DBBannedUsers;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -38,6 +40,8 @@ public class Console {
         tasks.put("threads_interrupt", Console::onThreadsInterrupt);
         tasks.put("reload_slash_commands", Console::onReloadSlashCommands);
         tasks.put("disconnect", Console::onDisconnect);
+        tasks.put("block", Console::onBlock);
+        tasks.put("unblock", Console::onUnblock);
     }
 
     private static void onReloadSlashCommands(long inputId, String[] args) {
@@ -87,8 +91,28 @@ public class Console {
     private static void onDisconnect(long inputId, String[] args) {
         print(inputId, "Disconnecting...");
         DiscordConnector.disconnect();
-        // DBMain.getInstance().disconnect();
+        DBMain.getInstance().disconnect();
         System.exit(0);
+    }
+
+    private static void onBlock(long inputId, String[] args) {
+        if (args.length < 2) {
+            print(inputId, "Please provide a user id");
+            return;
+        }
+        long userId = Long.parseLong(args[1]);
+        DBBannedUsers.getInstance().retrieve().getUserIds().add(userId);
+        MainLogger.get().info("Blocked user {}", userId);
+    }
+
+    private static void onUnblock(long inputId, String[] args) {
+        if (args.length < 2) {
+            print(inputId, "Please provide a user id");
+            return;
+        }
+        long userId = Long.parseLong(args[1]);
+        DBBannedUsers.getInstance().retrieve().getUserIds().remove(userId);
+        MainLogger.get().info("Unblocked user {}", userId);
     }
 
     private static void onHelp(long inputId, String[] args) {
