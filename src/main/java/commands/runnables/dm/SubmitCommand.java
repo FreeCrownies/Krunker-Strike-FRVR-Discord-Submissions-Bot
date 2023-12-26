@@ -228,7 +228,7 @@ public class SubmitCommand extends NavigationAbstract {
         String notset = TextManager.getString(getLocale(), TextManager.GENERAL, "not_set");
         setComponents(optionsToButtons(getString("state1_options").split("\n"), mediaUrl != null));
         return EmbedFactory
-                .getEmbedDefault(this, getString("state2_description"), getString("state2_title"))
+                .getEmbedDefault(this, getString("state4_description"), getString("state4_title"))
                 .addField(getString("state1_field_media_title"), mediaUrl == null ? notset : mediaUrl, false)
                 .addField(getString("state1_field_description_title"), description == null ? notset : description, false);
     }
