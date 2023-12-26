@@ -2,6 +2,6 @@ package constants;
 
 public enum SubmissionType {
 
-    GAMEPLAY, SKIN;
+    GAMEPLAY, SKIN, FAN_ART
 
 }

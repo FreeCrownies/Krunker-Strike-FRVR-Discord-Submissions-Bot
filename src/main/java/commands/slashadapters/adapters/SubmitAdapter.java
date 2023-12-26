@@ -7,7 +7,7 @@ import commands.slashadapters.SlashMeta;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.interactions.commands.build.SlashCommandData;
 
-@Slash(command = SubmitCommand.class, description = "Submit your stuff lol", guildOnly = false)
+@Slash(command = SubmitCommand.class, description = "Run this command to make your submission", guildOnly = false)
 public class SubmitAdapter extends SlashAdapter {
 
     @Override

@@ -9,7 +9,6 @@ import constants.RegexPatterns;
 import constants.SubmissionType;
 import core.*;
 import core.utils.ExceptionUtil;
-import core.utils.MentionUtil;
 import mysql.modules.submission.DBSubmission;
 import mysql.modules.submission.SubmissionSlot;
 import net.dv8tion.jda.api.EmbedBuilder;
@@ -24,7 +23,6 @@ import net.dv8tion.jda.api.interactions.components.text.TextInput;
 import net.dv8tion.jda.api.interactions.components.text.TextInputStyle;
 import net.dv8tion.jda.api.interactions.modals.Modal;
 
-import java.net.URL;
 import java.util.List;
 import java.util.Locale;
 import java.util.regex.Matcher;
@@ -41,6 +39,7 @@ public class SubmitCommand extends NavigationAbstract {
             HOME = 0,
             SUBMIT_GAMEPLAY = 1,
             SUBMIT_SKIN = 2,
+            SUBMIT_ART = 4,
             SUBMISSION_COMPLETED = 3;
 
     private String mediaUrl, description;
@@ -79,24 +78,12 @@ public class SubmitCommand extends NavigationAbstract {
 
     @ControllerMessage(state = SUBMIT_SKIN)
     public MessageInputResponse onMessageSubmitSkin(MessageReceivedEvent event, String input) {
-        DiscordFile discordFile;
-        List<Message.Attachment> attachments = event.getMessage().getAttachments();
+        return onMessageImage(event, input);
+    }
 
-        if (!attachments.isEmpty()) {
-            Message.Attachment attachment = attachments.get(0);
-            mediaUrl = attachment.getUrl();
-        } else {
-            Pattern p = RegexPatterns.IMAGE_URL;
-            Matcher m = p.matcher(input);
-            if (m.find()) {
-                mediaUrl = m.group();
-            } else {
-                setLog(LogStatus.FAILURE, TextManager.getNoResultsString(getLocale(), event.getMessage().getContentRaw()));
-                return MessageInputResponse.FAILED;
-            }
-        }
-        setLog(LogStatus.SUCCESS, getString("set_media"));
-        return MessageInputResponse.SUCCESS;
+    @ControllerMessage(state = SUBMIT_ART)
+    public MessageInputResponse onMessageSubmitArt(MessageReceivedEvent event, String input) {
+        return onMessageImage(event, input);
     }
 
 
@@ -111,7 +98,10 @@ public class SubmitCommand extends NavigationAbstract {
                 setState(SUBMIT_SKIN);
                 return true;
             }
-
+            case 2 -> {
+                setState(SUBMIT_ART);
+                return true;
+            }
         }
         return false;
     }
@@ -176,6 +166,36 @@ public class SubmitCommand extends NavigationAbstract {
         return false;
     }
 
+    @ControllerButton(state = SUBMIT_ART)
+    public boolean onButtonSubmitArt(ButtonInteractionEvent event, int i) {
+        switch (i) {
+            case -1 -> {
+                setState(HOME);
+                return true;
+            }
+            case 0 -> {
+                event.replyModal(runDescriptionModal()).queue();
+                return false;
+            }
+            case 1 -> {
+                description = null;
+                return true;
+            }
+            case 2 -> {
+                if (DBSubmission.getInstance().get().getSubmission(event.getUser().getIdLong(), SubmissionType.ART).isPresent()) {
+                    setLog(LogStatus.FAILURE, getString("already_submitted"));
+                    return true;
+                }
+
+                sendSubmissionRequest(event.getUser());
+                setState(SUBMISSION_COMPLETED);
+                deregisterListenersWithComponents();
+                return true;
+            }
+        }
+        return false;
+    }
+
 
     @Draw(state = HOME)
     public EmbedBuilder onDrawHome(User user) throws Throwable {
@@ -196,7 +216,17 @@ public class SubmitCommand extends NavigationAbstract {
     @Draw(state = SUBMIT_SKIN)
     public EmbedBuilder onDrawSubmitSkin(User user) throws Throwable {
         String notset = TextManager.getString(getLocale(), TextManager.GENERAL, "not_set");
-        setComponents(optionsToButtons(getString("state2_options").split("\n"), mediaUrl != null));
+        setComponents(optionsToButtons(getString("state1_options").split("\n"), mediaUrl != null));
+        return EmbedFactory
+                .getEmbedDefault(this, getString("state2_description"), getString("state2_title"))
+                .addField(getString("state1_field_media_title"), mediaUrl == null ? notset : mediaUrl, false)
+                .addField(getString("state1_field_description_title"), description == null ? notset : description, false);
+    }
+
+    @Draw(state = SUBMIT_ART)
+    public EmbedBuilder onDrawSubmitArt(User user) throws Throwable {
+        String notset = TextManager.getString(getLocale(), TextManager.GENERAL, "not_set");
+        setComponents(optionsToButtons(getString("state1_options").split("\n"), mediaUrl != null));
         return EmbedFactory
                 .getEmbedDefault(this, getString("state2_description"), getString("state2_title"))
                 .addField(getString("state1_field_media_title"), mediaUrl == null ? notset : mediaUrl, false)
@@ -208,6 +238,26 @@ public class SubmitCommand extends NavigationAbstract {
         return EmbedFactory.getEmbedDefault(this, getString("state3_description"), getString("state3_title"));
     }
 
+
+    private MessageInputResponse onMessageImage(MessageReceivedEvent event, String input) {
+        List<Message.Attachment> attachments = event.getMessage().getAttachments();
+
+        if (!attachments.isEmpty()) {
+            Message.Attachment attachment = attachments.get(0);
+            mediaUrl = attachment.getUrl();
+        } else {
+            Pattern p = RegexPatterns.IMAGE_URL;
+            Matcher m = p.matcher(input);
+            if (m.find()) {
+                mediaUrl = m.group();
+            } else {
+                setLog(LogStatus.FAILURE, TextManager.getNoResultsString(getLocale(), event.getMessage().getContentRaw()));
+                return MessageInputResponse.FAILED;
+            }
+        }
+        setLog(LogStatus.SUCCESS, getString("set_media"));
+        return MessageInputResponse.SUCCESS;
+    }
 
     private Modal runDescriptionModal() {
         TextInput textInput = TextInput.create("0", getString("state1_modal_input_label"), TextInputStyle.PARAGRAPH)
@@ -229,7 +279,12 @@ public class SubmitCommand extends NavigationAbstract {
     }
 
     private void sendSubmissionRequest(User user) {
-        SubmissionType submissionType = getState() == SUBMIT_GAMEPLAY ? SubmissionType.GAMEPLAY : SubmissionType.SKIN;
+        SubmissionType submissionType = switch (getState()) {
+            case SUBMIT_GAMEPLAY -> SubmissionType.GAMEPLAY;
+            case SUBMIT_SKIN -> SubmissionType.SKIN;
+            case SUBMIT_ART -> SubmissionType.ART;
+            default -> throw new IllegalStateException("Unexpected value: " + getState());
+        };
         String notset = TextManager.getString(getLocale(), TextManager.GENERAL, "not_set");
         TextChannel channel = ShardManager.getLocalGuildById(1160968659091599380L).get().getTextChannelById(1187396670456082453L);
         Long messageIdVideo;
@@ -238,15 +293,15 @@ public class SubmitCommand extends NavigationAbstract {
         } else {
             messageIdVideo = null;
         }
-        channel.sendMessageEmbeds(
-                EmbedFactory.getEmbedDefault()
-                        .setTitle("New " + (getState() == SUBMIT_GAMEPLAY ? "Gameplay" : "Skin") + " submission")
-                        .addField("User", user.getAsTag() + " (" + user.getAsMention() + ")", false)
-                        .addField("Description", description == null ? notset : description, false)
-                        .addField("Media", mediaUrl, false)
-                        .setImage(mediaUrl)
-                        .build()
-        ).addActionRow(
+        EmbedBuilder eb = EmbedFactory.getEmbedDefault()
+                .setTitle(getString("submission_title_" + submissionType.ordinal()) + " submission")
+                .addField("User", user.getAsTag() + " (" + user.getAsMention() + ")", false)
+                .addField("Description", description == null ? notset : description, false)
+                .addField("Media", mediaUrl, false);
+        if (submissionType != SubmissionType.GAMEPLAY) {
+            eb.setImage(mediaUrl);
+        }
+        channel.sendMessageEmbeds(eb.build()).addActionRow(
                 Button.success(
                         "submission:approve",
                         "Approve"

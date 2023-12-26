@@ -29,6 +29,7 @@ public class ButtonClickSubmission extends ButtonClickAbstract {
 
     private static final WebhookClient skinWebhookClient = WebhookClient.withUrl(System.getenv("WEBHOOK_SKIN"));
     private static final WebhookClient gameplayWebhookClient = WebhookClient.withUrl(System.getenv("WEBHOOK_GAMEPLAY"));
+    private static final WebhookClient fanartWebhookClient = WebhookClient.withUrl(System.getenv("WEBHOOK_FANART"));
 
     @Override
     public boolean onButtonClick(ButtonInteractionEvent event) throws Throwable {
@@ -62,9 +63,11 @@ public class ButtonClickSubmission extends ButtonClickAbstract {
     private void approve(ButtonInteractionEvent event, SubmissionSlot submissionSlot) {
         DBSubmission.getInstance().get().getSubmissions().remove(event.getMessageIdLong());
 
-        boolean sent = submissionSlot.getSubmissionType() == SubmissionType.GAMEPLAY ?
-                sendGameplay(submissionSlot) :
-                sendSkin(submissionSlot);
+        boolean sent = switch(submissionSlot.getSubmissionType()) {
+            case GAMEPLAY -> sendGameplay(submissionSlot);
+            case SKIN -> sendSkin(submissionSlot);
+            case FAN_ART -> sendFanart(submissionSlot);
+        };
 
         EmbedBuilder eb;
 
@@ -184,20 +187,6 @@ public class ButtonClickSubmission extends ButtonClickAbstract {
             return false;
         }
 
-//        WebhookEmbed webhookEmbed = new WebhookEmbedBuilder()
-//                .setTitle(new WebhookEmbed.EmbedTitle("Skin Show-Off", null))
-//                .setDescription(submissionSlot.getDescription())
-//                .addField(new WebhookEmbed.EmbedField(false, "Author", "<@" + submissionSlot.getUserId() + ">"))
-//                .setColor(0xFFFFFF)
-//                .setImageUrl(submissionSlot.getMediaUrl())
-//                .build();
-//
-//        WebhookMessage webhookMessage = new WebhookMessageBuilder()
-//                .setAvatarUrl(member.getEffectiveAvatarUrl())
-//                .setUsername(member.getEffectiveName())
-//                .addEmbeds(webhookEmbed)
-//                .build();
-
         WebhookMessage webhookMessage = new WebhookMessageBuilder()
                 .setAllowedMentions(AllowedMentions.none())
                 .setContent((submissionSlot.getDescription()  != null ? submissionSlot.getDescription() : "") + "\n\n[Skin](" + submissionSlot.getMediaUrl() + ") by <@" + submissionSlot.getUserId() + ">")
@@ -213,6 +202,37 @@ public class ButtonClickSubmission extends ButtonClickAbstract {
                 .setColor(Color.GREEN)
                 .setDescription("Your skin has been accepted and sent into <#1160978252433727638>.")
                 .addField("Skin", submissionSlot.getMediaUrl(), false);
+        if (submissionSlot.getDescription() != null) {
+            eb.addField("Description", submissionSlot.getDescription(), false);
+        }
+        JDAUtil.sendPrivateMessage(submissionSlot.getUserId(), eb.build()).queue(s -> {
+        }, f -> {
+        });
+        return true;
+    }
+
+    private boolean sendFanart(SubmissionSlot submissionSlot) {
+        Guild guild = ShardManager.getLocalGuildById(1160968659091599380L).get();
+        Member member = MemberCacheController.getInstance().loadMember(guild, submissionSlot.getUserId()).join();
+        if (member == null) {
+            return false;
+        }
+
+        WebhookMessage webhookMessage = new WebhookMessageBuilder()
+                .setAllowedMentions(AllowedMentions.none())
+                .setContent((submissionSlot.getDescription()  != null ? submissionSlot.getDescription() : "") + "\n\n[Fan-Art](" + submissionSlot.getMediaUrl() + ") by <@" + submissionSlot.getUserId() + ">")
+                .setAvatarUrl(member.getEffectiveAvatarUrl())
+                .setUsername(member.getEffectiveName())
+                .build();
+
+        fanartWebhookClient.send(webhookMessage)
+                .exceptionally(ExceptionLogger.get());
+
+        EmbedBuilder eb = new EmbedBuilder()
+                .setTitle("Fan-Art")
+                .setColor(Color.GREEN)
+                .setDescription("Your fan-art has been accepted and sent into <#1160978252433727638>.")
+                .addField("Fan-Art", submissionSlot.getMediaUrl(), false);
         if (submissionSlot.getDescription() != null) {
             eb.addField("Description", submissionSlot.getDescription(), false);
         }
