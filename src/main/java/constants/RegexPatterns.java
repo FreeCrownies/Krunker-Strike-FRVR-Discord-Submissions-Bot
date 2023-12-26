@@ -16,5 +16,7 @@ public interface RegexPatterns {
             Pattern.compile("(?<!\\\\)\\[(?<inner>(?:\\\\.|[^\\]\\[\\\\])*)\\]", Pattern.DOTALL);
     Pattern EMOTE = Pattern.compile("<a?:(?<name>[^:]*):(?<id>[0-9]*)>");
     Pattern INTERACTION = Pattern.compile("^/api/v[0-9]*/(interactions|webhooks)/.*");
+    Pattern VIDEO_URL = Pattern.compile("\\b(?:https?://|www\\.)\\S+\\.(?i:mp4|avi|mov|flv|wmv|mkv|youtube\\.com/watch\\?v=|youtu\\.be/)\\S+?(?i:\\.(?:mp4|avi|mov|flv|wmv|mkv))?\\b");
+    Pattern IMAGE_URL = Pattern.compile("\\bhttps?://\\S+\\.(?i:png|jpe?g|gif|bmp)\\b");
 
 }

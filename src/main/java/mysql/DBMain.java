@@ -70,13 +70,6 @@ public class DBMain implements DriverAction {
         MainLogger.get().info("Connecting with database {}", rv.getUrl());
         connection = rv.getConnection();
 
-        //File file = new File("database.db");
-        //if (!file.exists()) {
-        //    file.createNewFile();
-        //}
-        //String url = "jdbc:mysql:" + file.getPath();
-        //MainLogger.get().info("Connecting with database {}", url);
-        //connection = DriverManager.getConnection(url);
         SQLSchema.onCreate();
     }
 

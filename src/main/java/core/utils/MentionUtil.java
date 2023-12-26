@@ -284,6 +284,26 @@ public class MentionUtil {
         return new MentionList<>(string, list);
     }
 
+    public static MentionList<URL> getVideos(String string) {
+        ArrayList<URL> list = new ArrayList<>();
+
+        for (String part : getUrlArgs(string)) {
+            if (urlContainsVideo(part)) {
+                if (!part.contains(" ") && !part.contains("\n")) {
+                    try {
+                        URL urlTemp = new URL(part);
+                        if (!list.contains(urlTemp)) list.add(urlTemp);
+                        string = string.replace(part, "");
+                    } catch (MalformedURLException e) {
+                        MainLogger.get().error("Wrong url", e);
+                    }
+                }
+            }
+        }
+
+        return new MentionList<>(string, list);
+    }
+
     private static ArrayList<String> getUrlArgs(String string) {
         ArrayList<String> list = new ArrayList<>();
         if (string.length() > 0) {
@@ -330,6 +350,27 @@ public class MentionUtil {
 
             for (int i = 0; i < 2; i++) {
                 if (fileType.endsWith("jpg") || fileType.endsWith("jpeg") || fileType.endsWith("png") || fileType.endsWith("bmp") || fileType.endsWith("webp") || fileType.endsWith("gif")) {
+                    return true;
+                }
+                fileType = url.toLowerCase();
+            }
+
+            return false;
+        } catch (IOException e) {
+            //Ignore
+        }
+        return false;
+    }
+
+    private static boolean urlContainsVideo(String url) {
+        String fileType;
+        try {
+            URLConnection conn = new URL(url).openConnection();
+            if (conn == null) return false;
+            fileType = conn.getContentType().toLowerCase();
+
+            for (int i = 0; i < 2; i++) {
+                if (fileType.endsWith("mp4") || fileType.endsWith("avi") || fileType.endsWith("wmv") || fileType.endsWith("avchd") || fileType.endsWith("webm") || fileType.endsWith("flv") || fileType.endsWith("mpeg-4")) {
                     return true;
                 }
                 fileType = url.toLowerCase();

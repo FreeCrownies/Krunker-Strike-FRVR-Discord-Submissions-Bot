@@ -273,10 +273,8 @@ public class DiscordEventAdapter extends ListenerAdapter {
 
     @Override
     public void onButtonInteraction(@NotNull ButtonInteractionEvent event) {
-        if (event.getChannel() instanceof GuildMessageChannelUnion) {
-            GlobalThreadPool.getExecutorService()
-                    .submit(() -> ButtonClickAbstract.onButtonClickStatic(event, getListenerList(ButtonClickAbstract.class)));
-        }
+        GlobalThreadPool.getExecutorService()
+                .submit(() -> ButtonClickAbstract.onButtonClickStatic(event, getListenerList(ButtonClickAbstract.class)));
     }
 
     @Override
@@ -289,10 +287,8 @@ public class DiscordEventAdapter extends ListenerAdapter {
 
     @Override
     public void onModalInteraction(@NotNull ModalInteractionEvent event) {
-        if (event.getChannel() instanceof GuildMessageChannelUnion) {
-            GlobalThreadPool.getExecutorService()
-                    .submit(() -> ModalInteractionAbstract.onModalInteractionStatic(event, getListenerList(ModalInteractionAbstract.class)));
-        }
+        GlobalThreadPool.getExecutorService()
+                .submit(() -> ModalInteractionAbstract.onModalInteractionStatic(event, getListenerList(ModalInteractionAbstract.class)));
     }
 
     @Override

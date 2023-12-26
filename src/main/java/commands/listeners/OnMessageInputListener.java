@@ -11,6 +11,7 @@ import core.utils.ExceptionUtil;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.User;
+import net.dv8tion.jda.api.entities.channel.ChannelType;
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
 
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -27,8 +28,8 @@ public interface OnMessageInputListener extends Drawable {
     default void registerMessageInputListener(User member, boolean draw) {
         Command command = (Command) this;
         registerMessageInputListener(member, draw, event -> {
-                    boolean ok = event.getMember().getIdLong() == member.getIdLong() &&
-                            event.getChannel().getIdLong() == command.getTextChannelId().orElse(0L);
+                    boolean ok = event.getAuthor().getIdLong() == member.getIdLong() &&
+                            (event.getChannelType() == ChannelType.PRIVATE || event.getChannel().getIdLong() == command.getTextChannelId().orElse(0L));
                     return ok ? CommandListenerMeta.CheckResponse.ACCEPT : CommandListenerMeta.CheckResponse.IGNORE;
                 }
         );
@@ -87,7 +88,7 @@ public interface OnMessageInputListener extends Drawable {
             if (messageInputResponse != null) {
                 if (messageInputResponse == MessageInputResponse.SUCCESS) {
                     CommandContainer.refreshListeners(command);
-                    if (BotPermissionUtil.can(event.getGuildChannel(), Permission.MESSAGE_MANAGE)) {
+                    if (event.getChannelType() != ChannelType.PRIVATE && BotPermissionUtil.can(event.getGuildChannel(), Permission.MESSAGE_MANAGE)) {
                         event.getMessage().delete().queue();
                     }
                 }
